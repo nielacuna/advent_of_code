@@ -7,8 +7,8 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <unistd.h>
 
-#define BUFFER_BLOCKSIZE       256
 
 enum {
         TOKEN_LITERAL = 128,
@@ -21,7 +21,6 @@ static char *p;
 static char *pos;
 static int linesize;
 static int count;
-static char sym;
 
 /* this time we are only interested in digits */
 static void next(void)
@@ -49,7 +48,6 @@ static void next(void)
 static bool is_symbol(const int idx)
 {
         char *pp = map + idx;
-        sym = *pp;
         return (*pp != '.') && (*pp < '0' || *pp > '9');
 }
 
@@ -166,7 +164,6 @@ int main(void)
 {
         int fd;
         struct stat st;
-        int calibration;
         char *buf;
         char *pp;
         int ans = 0;
@@ -213,6 +210,8 @@ int main(void)
                 next();
         }
         printf("ans is %d\n", ans);
+        free(buf);
+        close(fd);
         return 0;
 }
 
