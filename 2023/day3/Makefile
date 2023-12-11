@@ -1,8 +1,9 @@
-PART1=aoc2023_day3_part1
+PARTS=aoc2023_day3_part1 \
+      aoc2023_day3_part2
 
-all: $(PART1)
+all: $(PARTS)
 
-$(PART1): $(PART1).o
+aoc2023_day3_part%: aoc2023_day3_part%.o
 	@echo "CC $@"
 	@$(CC) -O0 -ggdb -o $@ $^
 
@@ -12,7 +13,7 @@ $(PART1): $(PART1).o
 
 .PHONY: clean tags
 clean:
-	rm -rf $(PART1) $(PART2)
+	rm -rf $(PARTS)
 	rm -rf *.o
 
 tags: 
