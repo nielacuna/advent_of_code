@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-
 enum {
         TOKEN_LITERAL = 128,
         TOKEN_CARD,
@@ -19,6 +18,7 @@ char *map;
 static int tk;
 static int tk_value;
 static char *p;
+static char *cardp;
 static int card_n;
 
 static void next(void)
@@ -40,6 +40,7 @@ static void next(void)
                 }
                 switch (tk) {
                 case 'C': /* assume Card */
+                        cardp = p - 1;
                         p = p + strlen("ard");
                         tk = TOKEN_CARD;
                         return;
@@ -56,6 +57,8 @@ static void next(void)
 
 static int winning_numbers[WINNING_NUMBERS_COUNT];
 
+static int scratch_cards_count[256] = {0};
+
 int main(void)
 {
         int fd;
@@ -63,6 +66,7 @@ int main(void)
         char *buf;
         char *pp;
         int ans = 0;
+        int iterations = 0;
         if ((fd = open("input", O_RDONLY)) == -1) {
                 fprintf(stderr, "cannot open input file\n");
                 exit(-1);
@@ -74,20 +78,27 @@ int main(void)
         }
         p = map;
 
+        /* we process each scratch card at least once */
+        for (size_t i = 0; i<256; i++) {
+                scratch_cards_count[i] = 1;
+        }
+
         next();
         while (tk != '\0') {
+                int *scratchcard_count_ptr;
                 assert(tk == TOKEN_CARD);
 
                 /* card number follows "Card" */
                 next();
                 assert(tk == TOKEN_LITERAL);
                 card_n = tk_value;
+                scratchcard_count_ptr = scratch_cards_count + (card_n - 1);
 
                 /* next should be a colon */
                 next();
                 assert(tk == ':');
 
-                /* next n literals is our winning numbers */
+                /* next n literals are the winning numbers */
                 size_t iwinning = 0;
                 next();
                 while(tk != '|') {
@@ -98,21 +109,34 @@ int main(void)
                         next();
                 };
 
+                /* next set of literals are the actual numbers we have */
                 next();
-                size_t power_of_two = 0;
+                size_t wins = 0;
+                int *next_scratchcard_count_ptr = scratch_cards_count + card_n;
                 while(tk != '\n') {
                         size_t i;
                         assert(tk == TOKEN_LITERAL);
                         for (i=0; i<WINNING_NUMBERS_COUNT; i++) {
                                 if (winning_numbers[i] == tk_value) {
-                                        power_of_two++;
+                                        wins++;
+                                        *next_scratchcard_count_ptr = *next_scratchcard_count_ptr + 1;
+                                        next_scratchcard_count_ptr++;
                                 }
                         }
+
+                        /* get next literal on our scratch card */
                         next();
                 }
-                if (power_of_two) {
-                        ans += (1 << (power_of_two-1));
+
+                /* repeat processing of the same card */
+                if (++iterations < *scratchcard_count_ptr) {
+                        p = cardp;
+                } else {
+                        ans += *scratchcard_count_ptr;
+                        iterations = 0;
                 }
+
+                /* get next "Card" token */
                 next();
         }
         printf("ans is %d\n", ans);
